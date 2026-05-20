@@ -499,6 +499,15 @@ func (svc *Service) StreamHosts(ctx context.Context, opt fleet.HostListOptions) 
 					host.Users = hu
 				}
 
+				if opt.PopulateEndUsers {
+					heu, err := fleet.GetEndUsers(ctx, svc.ds, host.ID)
+					if err != nil {
+						yield(nil, ctxerr.Wrapf(ctx, err, "get end users for host %d", host.ID))
+						return
+					}
+					host.EndUsers = heu
+				}
+
 				if opt.IncludeDeviceStatus {
 					if status, ok := statusMap[host.ID]; ok {
 						host.MDM.DeviceStatus = ptr.String(string(status.DeviceStatus()))
@@ -1857,6 +1866,7 @@ func (svc *Service) getHostDetails(ctx context.Context, host *fleet.Host, opts f
 	if err != nil {
 		return nil, ctxerr.Wrap(ctx, err, "get end users for host")
 	}
+	host.EndUsers = endUsers
 
 	conditionalAccessBypassedAt, err := svc.ds.ConditionalAccessBypassedAt(ctx, host.ID)
 	if err != nil {
@@ -1870,7 +1880,6 @@ func (svc *Service) getHostDetails(ctx context.Context, host *fleet.Host, opts f
 		Packs:                         packs,
 		Batteries:                     &bats,
 		MaintenanceWindow:             nextMw,
-		EndUsers:                      endUsers,
 		LastMDMEnrolledAt:             mdmLastEnrollment,
 		LastMDMCheckedInAt:            mdmLastCheckedIn,
 		MDMEnrollmentHardwareAttested: mdmHardwareAttested,
